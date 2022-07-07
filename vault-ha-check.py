@@ -7,7 +7,7 @@ import requests
 import socket
 
 GENERIC_HOSTNAME = "vault.services.fedcloud.eu"
-UPDATE_SECRET = "XXXXX"
+UPDATE_SECRET = "XXXXXXXXX"
 INSTANCE_HOSTNAMES = ("vault-infn.services.fedcloud.eu", "vault-ifca.services.fedcloud.eu")
 
 
@@ -25,9 +25,11 @@ def check_server_health(server):
             print(f"Server {server} is OK")
             return True
     except Exception as e:
-        print(f'[ERROR]: {e}')
+        print(f"Error during connecting to server {server}")
+        print(f"Error message: {e}")
 
     # Return False by default
+    print(f"Server {server} is faulty")
     return False
 
 
@@ -43,7 +45,14 @@ def update_generic_endpoint(generic, server, update_secret):
     update_string = f"https://{generic}:{update_secret}@nsupdate.fedcloud.eu/nic/update?hostname={generic}&myip={ip}"
     # print(f"Update string: {update_string}", file=sys.stderr)
     r = requests.get(update_string, timeout=4)
-    print(f"Server response: {r.text}", file=sys.stderr)
+    if r.status_code == 200:
+        print(f"Generic endpoint {generic} successfully updated to {server}")
+        print(f"Server response: {r.text}")
+        return 0
+    else:
+        print(f"Error during updating Generic endpoint {generic} to {server}")
+        print(f"Server response: {r.text}")
+        return 2
 
 
 def check_and_update(generic, instances, update_secret):
@@ -71,10 +80,7 @@ def check_and_update(generic, instances, update_secret):
 
                 # Found a healthy one, updating generic endpoint to it
                 print(f"Update {generic} to instance {instance}")
-                update_generic_endpoint(generic, instance, update_secret)
-
-                # Generic endpoint updated, return OK
-                return 0
+                return update_generic_endpoint(generic, instance, update_secret)
 
         # No healthy instance found, print error message and return CRITICAL
         print("Error: All servers are faulty. Raise alarm !!!")
